@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Reserve Appointment - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-calendar-plus me-2"></i>Reserve Appointment</h2>
+        <p class="text-muted">Schedule an appointment with one of our doctors</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Appointment Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('patients.reserve_appointment') }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.doctor.label(class="form-label") }}
+                        {{ form.doctor(class="form-select" + (" is-invalid" if form.doctor.errors else ""), id="doctor-select") }}
+                        {% for error in form.doctor.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.time_slot.label(class="form-label") }}
+                        {{ form.time_slot(class="form-select" + (" is-invalid" if form.time_slot.errors else ""), id="time-slot-select") }}
+                        {% for error in form.time_slot.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Available time slots for the selected doctor</div>
+                        <div id="no-slots-message" class="alert alert-warning mt-2 d-none">
+                            No available time slots for the selected doctor. Please select another doctor or try again later.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.reason.label(class="form-label") }}
+                        {{ form.reason(class="form-control" + (" is-invalid" if form.reason.errors else ""), rows=3) }}
+                        {% for error in form.reason.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Briefly describe the reason for your visit</div>
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary", id="form-submit-btn") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Function to load time slots when doctor is selected
+        function loadTimeSlots() {
+            const doctorId = $('#doctor-select').val();
+            if (doctorId) {
+                $.getJSON("{{ url_for('patients.get_time_slots', doctor_id=0) }}".replace('0', doctorId), function(data) {
+                    const timeSlotSelect = $('#time-slot-select');
+                    timeSlotSelect.empty();
+
+                    if (data.time_slots.length > 0) {
+                        $.each(data.time_slots, function(index, slot) {
+                            timeSlotSelect.append($('<option></option>').attr('value', slot.id).text(slot.text));
+                        });
+                        $('#no-slots-message').addClass('d-none');
+                        $('#form-submit-btn').prop('disabled', false);
+                    } else {
+                        timeSlotSelect.append($('<option></option>').attr('value', '').text('No available time slots'));
+                        $('#no-slots-message').removeClass('d-none');
+                        $('#form-submit-btn').prop('disabled', true);
+                    }
+                });
+            }
+        }
+
+        // Load time slots when doctor selection changes
+        $('#doctor-select').change(loadTimeSlots);
+
+        // Load time slots on page load if doctor is already selected
+        if ($('#doctor-select').val()) {
+            loadTimeSlots();
+        }
+    });
+</script>
+{% endblock %}

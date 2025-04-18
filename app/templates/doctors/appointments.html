@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}My Appointments - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-calendar-alt me-2"></i>My Appointments</h2>
+        <p class="text-muted">View all your scheduled appointments</p>
+        <p class="text-muted">Current time: {{ now.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    </div>
+</div>
+
+<!-- Upcoming Appointments -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Upcoming Appointments</h5>
+    </div>
+    <div class="card-body">
+        {% set upcoming_appointments = [] %}
+        {% for appointment in appointments %}
+            {% if appointment.status.value in ['scheduled', 'rescheduled'] and appointment.time_slot.start_time >= now %}
+                {% set _ = upcoming_appointments.append(appointment) %}
+            {% endif %}
+        {% endfor %}
+
+        {% if upcoming_appointments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Date/Time</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appointment in upcoming_appointments|sort(attribute='time_slot.start_time') %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('doctors.patient_details', patient_id=appointment.patient_id) }}">
+                                        {{ appointment.patient.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {{ appointment.time_slot.start_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% set time_diff = (appointment.time_slot.start_time - now).total_seconds() / 3600 %}
+                                    {% if time_diff <= 24 %}
+                                        <span class="badge bg-danger">Today</span>
+                                    {% elif time_diff <= 48 %}
+                                        <span class="badge bg-warning text-dark">Tomorrow</span>
+                                    {% endif %}
+                                    <small class="d-block text-muted">Time diff: {{ time_diff|round(2) }} hours</small>
+                                </td>
+                                <td>
+                                    {% if appointment.status.value == 'scheduled' %}
+                                        <span class="badge bg-primary">{{ appointment.status.value }}</span>
+                                    {% elif appointment.status.value == 'rescheduled' %}
+                                        <span class="badge bg-warning text-dark">{{ appointment.status.value }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if appointment.reason %}
+                                        {{ appointment.reason }}
+                                    {% else %}
+                                        <span class="text-muted">No reason provided</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set time_diff = (appointment.time_slot.start_time - now).total_seconds() / 3600 %}
+                                    {% if time_diff <= 1 %}
+                                        <a href="{{ url_for('doctors.live_inspection', appointment_id=appointment.id) }}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-stethoscope me-1"></i>Start Examination
+                                        </a>
+                                        {% if time_diff <= 1 and appointment.time_slot.start_time > now %}
+                                            <small class="d-block text-muted mt-1">Early access (appointment in {{ (time_diff * 60)|int }} min)</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">Examination not available yet</span>
+                                        <small class="d-block text-muted mt-1">Available in {{ (time_diff * 60)|int }} min</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>You don't have any upcoming appointments.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Past Appointments -->
+<div class="card shadow">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="fas fa-history me-2"></i>Past Appointments</h5>
+    </div>
+    <div class="card-body">
+        {% set past_appointments = [] %}
+        {% for appointment in appointments %}
+            {% if appointment.status.value in ['completed', 'cancelled', 'no_show'] or
+                  (appointment.status.value in ['scheduled', 'rescheduled'] and appointment.time_slot.start_time < now) %}
+                {% set _ = past_appointments.append(appointment) %}
+            {% endif %}
+        {% endfor %}
+
+        {% if past_appointments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Date/Time</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appointment in past_appointments|sort(attribute='time_slot.start_time', reverse=true) %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('doctors.patient_details', patient_id=appointment.patient_id) }}">
+                                        {{ appointment.patient.name }}
+                                    </a>
+                                </td>
+                                <td>{{ appointment.time_slot.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    {% if appointment.status.value == 'completed' %}
+                                        <span class="badge bg-success">{{ appointment.status.value }}</span>
+                                    {% elif appointment.status.value == 'cancelled' %}
+                                        <span class="badge bg-danger">{{ appointment.status.value }}</span>
+                                    {% elif appointment.status.value == 'no_show' %}
+                                        <span class="badge bg-secondary">{{ appointment.status.value }}</span>
+                                    {% elif appointment.status.value in ['scheduled', 'rescheduled'] %}
+                                        <span class="badge bg-warning text-dark">Missed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if appointment.reason %}
+                                        {{ appointment.reason }}
+                                    {% else %}
+                                        <span class="text-muted">No reason provided</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('doctors.patient_details', patient_id=appointment.patient_id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-user me-1"></i>View Patient
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>You don't have any past appointments.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

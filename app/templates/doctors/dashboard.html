@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Dashboard - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-tachometer-alt me-2"></i>Doctor Dashboard</h2>
+        <p class="text-muted">Welcome back, Dr. {{ current_user.name }}!</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('doctors.upload_requests') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-images me-2"></i>View Upload Requests
+                    </a>
+                    <a href="{{ url_for('doctors.appointments') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-alt me-2"></i>View Scheduled Appointments
+                    </a>
+                    <a href="{{ url_for('doctors.profile') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user me-2"></i>View Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Appointments -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-day me-2"></i>Today's Appointments</h5>
+            </div>
+            <div class="card-body">
+                {% if today_appointments %}
+                    <div class="list-group">
+                        {% for appointment in today_appointments %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ appointment.patient.name }}</h6>
+                                    <small>{{ appointment.time_slot.start_time.strftime('%H:%M') }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    {% if appointment.reason %}
+                                        {{ appointment.reason }}
+                                    {% else %}
+                                        <span class="text-muted">No reason provided</span>
+                                    {% endif %}
+                                </p>
+                                <div class="mt-2">
+                                    {% set current_time = now if now is defined else None %}
+                                    {% if current_time %}
+                                        {% set time_diff = (appointment.time_slot.start_time - current_time).total_seconds() / 3600 %}
+                                        {% if appointment.time_slot.start_time <= current_time or time_diff <= 1 %}
+                                            <a href="{{ url_for('doctors.live_inspection', appointment_id=appointment.id) }}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-stethoscope me-1"></i>Start Examination
+                                            </a>
+                                            {% if time_diff <= 1 and appointment.time_slot.start_time > current_time %}
+                                                <small class="d-block text-muted mt-1">Early access (appointment in {{ (time_diff * 60)|int }} min)</small>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge bg-info">Upcoming</span>
+                                            <small class="d-block text-muted">{{ appointment.time_slot.start_time.strftime('%H:%M') }}</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-info">Upcoming</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ url_for('doctors.appointments') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No appointments scheduled for today</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Unreviewed Uploads -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Unreviewed Uploads</h5>
+            </div>
+            <div class="card-body">
+                {% if unreviewed_uploads %}
+                    <div class="list-group">
+                        {% for upload in unreviewed_uploads %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ upload.patient.name }}</h6>
+                                    <small>{{ upload.created_at.strftime('%Y-%m-%d') }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    <img src="{{ url_for('static', filename=upload.image_path) }}" class="img-thumbnail" style="max-height: 50px;">
+                                </p>
+                                <div class="mt-2">
+                                    <a href="{{ url_for('doctors.review_upload', upload_id=upload.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye me-1"></i>Review
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ url_for('doctors.upload_requests') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No unreviewed uploads</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications -->
+{% if notifications %}
+    <div class="row">
+        <div class="col">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Recent Notifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for notification in notifications %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ notification.message }}</h6>
+                                    <small>{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ url_for('doctors.notifications') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

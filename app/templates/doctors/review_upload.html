@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Upload - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-eye me-2"></i>Review Upload</h2>
+        <p class="text-muted">Review image uploaded by {{ patient.name }} on {{ upload.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Patient Information and Image -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ patient.name }}</p>
+                <p><strong>Email:</strong> {{ patient.email }}</p>
+
+                {% if patient.patient_profile %}
+                    {% if patient.patient_profile.date_of_birth %}
+                        <p><strong>Date of Birth:</strong> {{ patient.patient_profile.date_of_birth.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
+
+                    {% if patient.patient_profile.gender %}
+                        <p><strong>Gender:</strong> {{ patient.patient_profile.gender }}</p>
+                    {% endif %}
+
+                    {% if patient.patient_profile.phone %}
+                        <p><strong>Phone:</strong> {{ patient.patient_profile.phone }}</p>
+                    {% endif %}
+
+                    {% if patient.patient_profile.medical_history %}
+                        <div class="mt-3">
+                            <h6>Medical History</h6>
+                            <p class="text-muted">{{ patient.patient_profile.medical_history }}</p>
+                        </div>
+                    {% endif %}
+
+                    {% if patient.patient_profile.allergies %}
+                        <div class="mt-3">
+                            <h6>Allergies</h6>
+                            <p class="text-muted">{{ patient.patient_profile.allergies }}</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No additional profile information available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card shadow mt-3">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-image me-2"></i>Uploaded Image</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ url_for('static', filename=upload.image_path) }}" class="img-fluid img-thumbnail">
+
+                {% if upload.message %}
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-comment me-2"></i>{{ upload.message }}
+                    </div>
+                {% endif %}
+
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary" id="aiModelBtn" data-upload-id="{{ upload.id }}">
+                        <i class="fas fa-robot me-2"></i>Analyze with AI Model
+                    </button>
+                </div>
+
+                <!-- AI Model Results -->
+                <div id="aiModelResults" class="mt-3" style="display: none;">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-brain me-2"></i>AI Analysis Results</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="loadingSpinner" class="text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Analyzing image...</p>
+                            </div>
+
+                            <div id="predictionResults" style="display: none;">
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Disclaimer:</strong> This is an AI-assisted analysis and should not replace professional medical judgment.
+                                </div>
+
+                                <div class="alert alert-primary">
+                                    <span id="topPredictionClass" class="fw-bold"></span>: <span id="topPredictionProb"></span>
+                                </div>
+                                <div class="progress-stacked mb-3" id="predictionBars">
+                                    <!-- Prediction bars will be inserted here -->
+                                </div>
+
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Condition</th>
+                                            <th>Probability</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="predictionTable">
+                                        <!-- Prediction rows will be inserted here -->
+                                    </tbody>
+                                </table>
+
+                                <button class="btn btn-sm btn-outline-secondary" id="copyToNotesBtn">
+                                    <i class="fas fa-clipboard me-1"></i>Copy to Notes
+                                </button>
+                            </div>
+
+                            <div id="predictionError" class="alert alert-danger" style="display: none;">
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                                <span id="errorMessage">An error occurred during analysis.</span>
+                                <div id="debugInfo" class="mt-2 small" style="white-space: pre-wrap;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous Diagnostics -->
+        {% set previous_diagnostics = patient.patient_diagnostic_records %}
+        {% if previous_diagnostics %}
+            <div class="card shadow mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Previous Diagnostics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="previousDiagnostics">
+                        {% for diagnostic in previous_diagnostics %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ diagnostic.id }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ diagnostic.id }}">
+                                        {{ diagnostic.created_at.strftime('%Y-%m-%d') }}
+                                        {% if diagnostic.red_flag %}
+                                            <span class="badge bg-danger ms-2">Red Flag</span>
+                                        {% endif %}
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ diagnostic.id }}" class="accordion-collapse collapse" data-bs-parent="#previousDiagnostics">
+                                    <div class="accordion-body">
+                                        <p><strong>Notes:</strong> {{ diagnostic.notes }}</p>
+                                        {% if diagnostic.prescriptions %}
+                                            <p><strong>Prescriptions:</strong> {{ diagnostic.prescriptions }}</p>
+                                        {% endif %}
+                                        {% if diagnostic.recommendations %}
+                                            <p><strong>Recommendations:</strong> {{ diagnostic.recommendations }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Diagnostic Form -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Diagnostic Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('doctors.review_upload', upload_id=upload.id) }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=4) }}
+                        {% for error in form.notes.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.prescriptions.label(class="form-label") }}
+                        {{ form.prescriptions(class="form-control" + (" is-invalid" if form.prescriptions.errors else ""), rows=3) }}
+                        {% for error in form.prescriptions.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.recommendations.label(class="form-label") }}
+                        {{ form.recommendations(class="form-control" + (" is-invalid" if form.recommendations.errors else ""), rows=3) }}
+                        {% for error in form.recommendations.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.red_flag(class="form-check-input" + (" is-invalid" if form.red_flag.errors else "")) }}
+                        {{ form.red_flag.label(class="form-check-label") }}
+                        {% for error in form.red_flag.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text text-danger">Check this if urgent follow-up is required</div>
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // AI Model button
+        $('#aiModelBtn').click(function() {
+            const uploadId = $(this).data('upload-id');
+
+            // Show the results container and loading spinner
+            $('#aiModelResults').show();
+            $('#loadingSpinner').show();
+            $('#predictionResults').hide();
+            $('#predictionError').hide();
+
+            // Call the API to get predictions
+            $.ajax({
+                url: `/doctors/api/predict-skin-disease/${uploadId}`,
+                method: 'GET',
+                success: function(data) {
+                    // Hide loading spinner
+                    $('#loadingSpinner').hide();
+                    console.log('API Response:', data);
+
+                    if (data.error) {
+                        // Show error message
+                        $('#errorMessage').text(data.error);
+
+                        // Special handling for model unavailable error
+                        if (data.model_status === 'unavailable') {
+                            $('#errorMessage').html('<strong>Model Unavailable</strong><br>' + data.error);
+                            $('#predictionError').removeClass('alert-danger').addClass('alert-warning');
+                            $('#aiModelBtn').prop('disabled', true).addClass('btn-secondary').removeClass('btn-outline-primary');
+                            $('#aiModelBtn').html('<i class="fas fa-exclamation-triangle me-2"></i>Model Unavailable');
+                        }
+
+                        $('#debugInfo').text('Full response: ' + JSON.stringify(data, null, 2));
+                        $('#predictionError').show();
+                    } else if (!data.top_prediction || !data.all_predictions) {
+                        // Invalid response format
+                        $('#errorMessage').text('Invalid response format from server');
+                        $('#debugInfo').text('Response missing required fields. Full response: ' + JSON.stringify(data, null, 2));
+                        $('#predictionError').show();
+                    } else {
+                        // Display prediction results
+                        displayPredictionResults(data);
+                        $('#predictionResults').show();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Hide loading spinner and show error
+                    $('#loadingSpinner').hide();
+                    $('#errorMessage').text('Failed to analyze image: ' + error);
+
+                    // Add debug info
+                    let debugInfo = 'Status: ' + status + '\n';
+                    if (xhr.responseText) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            debugInfo += 'Response: ' + JSON.stringify(response, null, 2);
+                        } catch (e) {
+                            debugInfo += 'Response: ' + xhr.responseText;
+                        }
+                    }
+                    $('#debugInfo').text(debugInfo);
+
+                    $('#predictionError').show();
+                    console.error('AJAX Error:', xhr, status, error);
+                }
+            });
+        });
+
+        // Copy to Notes button
+        $('#copyToNotesBtn').click(function() {
+            // Get the prediction values
+            const predictionClass = $('#topPredictionClass').text();
+            const predictionProb = $('#topPredictionProb').text();
+
+            // Create the formatted prediction text
+            let topPrediction = '';
+            if (predictionClass && predictionProb) {
+                topPrediction = predictionClass + ': ' + predictionProb;
+            } else {
+                // Fallback to get values from the first table row if the top prediction elements are empty
+                const firstRowClass = $('#predictionTable tr:first-child td:first-child').text();
+                const firstRowProb = $('#predictionTable tr:first-child td:last-child').text();
+                if (firstRowClass && firstRowProb) {
+                    topPrediction = firstRowClass + ': ' + firstRowProb;
+                } else {
+                    topPrediction = 'No specific prediction available';
+                }
+            }
+
+            // Get current notes text
+            let currentNotes = $('#notes').val();
+
+            // Add AI prediction to notes
+            const aiNotes = `\n\nAI Analysis Results:\n- Top prediction: ${topPrediction}\n- Note: This is an AI-assisted analysis and should not replace professional medical judgment.`;
+
+            // Update the notes field
+            $('#notes').val(currentNotes + aiNotes);
+
+            // Show confirmation
+            alert('AI analysis results added to notes!');
+        });
+
+        // Function to display prediction results
+        function displayPredictionResults(data) {
+            const topPrediction = data.top_prediction;
+            const allPredictions = data.all_predictions;
+
+            // Display top prediction
+            if (topPrediction && topPrediction.class) {
+                $('#topPredictionClass').text(topPrediction.class);
+                $('#topPredictionProb').text(topPrediction.percentage);
+            } else if (allPredictions && allPredictions.length > 0) {
+                // If no top prediction but we have all predictions, use the first one
+                $('#topPredictionClass').text(allPredictions[0].class);
+                $('#topPredictionProb').text(allPredictions[0].percentage);
+            } else {
+                // Fallback
+                $('#topPredictionClass').text('Unknown');
+                $('#topPredictionProb').text('N/A');
+            }
+
+            // Clear previous results
+            $('#predictionBars').empty();
+            $('#predictionTable').empty();
+
+            // Add prediction bars and table rows
+            const colors = ['bg-danger', 'bg-warning', 'bg-info', 'bg-success', 'bg-primary', 'bg-secondary', 'bg-dark'];
+
+            allPredictions.forEach((prediction, index) => {
+                // Add to stacked progress bar
+                const width = prediction.probability * 100;
+                const colorClass = colors[index % colors.length];
+
+                $('#predictionBars').append(
+                    `<div class="progress-bar ${colorClass}" role="progressbar" style="width: ${width}%"
+                     aria-valuenow="${width}" aria-valuemin="0" aria-valuemax="100"
+                     title="${prediction.class}: ${prediction.percentage}"></div>`
+                );
+
+                // Add to table
+                $('#predictionTable').append(
+                    `<tr>
+                        <td>${prediction.class}</td>
+                        <td>${prediction.percentage}</td>
+                    </tr>`
+                );
+            });
+        }
+    });
+</script>
+{% endblock %}

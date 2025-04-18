@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}My Uploads - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-images me-2"></i>My Uploads</h2>
+        <p class="text-muted">View all your uploaded symptom images</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('patients.upload_image') }}" class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload New Image
+        </a>
+    </div>
+</div>
+
+<div class="card shadow">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Image Uploads</h5>
+    </div>
+    <div class="card-body">
+        {% if uploads %}
+            <div class="row">
+                {% for upload in uploads %}
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Uploaded to Dr. {{ upload.doctor.name }}</span>
+                                {% if upload.is_reviewed %}
+                                    <span class="badge bg-success">Reviewed</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pending Review</span>
+                                {% endif %}
+                            </div>
+                            <img src="{{ url_for('static', filename=upload.image_path) }}" class="card-img-top" alt="Uploaded image">
+                            <div class="card-body">
+                                <p class="card-text text-muted small">{{ upload.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                
+                                {% if upload.message %}
+                                    <p class="card-text">{{ upload.message }}</p>
+                                {% endif %}
+                                
+                                <div class="mt-2">
+                                    {% if upload.is_reviewed and upload.diagnostic_record %}
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#diagnosisModal{{ upload.id }}">
+                                            <i class="fas fa-stethoscope me-1"></i>View Diagnosis
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>You haven't uploaded any images yet. Click the "Upload New Image" button to get started.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modals (completely outside the card structure) -->
+{% if uploads %}
+    {% for upload in uploads %}
+        {% if upload.is_reviewed and upload.diagnostic_record %}
+            <div class="modal fade" id="diagnosisModal{{ upload.id }}" tabindex="-1" aria-labelledby="diagnosisModalLabel{{ upload.id }}" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="diagnosisModalLabel{{ upload.id }}">
+                                <i class="fas fa-stethoscope me-2"></i>Diagnosis from Dr. {{ upload.doctor.name }}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <img src="{{ url_for('static', filename=upload.image_path) }}" class="img-fluid img-thumbnail" alt="Uploaded image">
+                                </div>
+                                <div class="col-md-8">
+                                    <h6>Diagnosis Notes:</h6>
+                                    <p>{{ upload.diagnostic_record.notes or 'No notes provided' }}</p>
+                                    
+                                    {% if upload.diagnostic_record.red_flag %}
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>This diagnosis has been marked as requiring urgent attention.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if upload.diagnostic_record.prescriptions %}
+                                <div class="mb-3">
+                                    <h6>Prescriptions:</h6>
+                                    <p>{{ upload.diagnostic_record.prescriptions }}</p>
+                                </div>
+                            {% endif %}
+                            
+                            {% if upload.diagnostic_record.recommendations %}
+                                <div class="mb-3">
+                                    <h6>Recommendations:</h6>
+                                    <p>{{ upload.diagnostic_record.recommendations }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endif %}
+{% endblock %}

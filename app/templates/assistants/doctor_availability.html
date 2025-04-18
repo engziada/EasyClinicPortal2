@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Availability - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-user-md me-2"></i>Doctor Availability</h2>
+        <p class="text-muted">View and manage doctor time slots</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Create Single Day Time Slots -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create Time Slots</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('assistants.doctor_availability') }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.doctor.label(class="form-label") }}
+                        {{ form.doctor(class="form-select" + (" is-invalid" if form.doctor.errors else "")) }}
+                        {% for error in form.doctor.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.date.label(class="form-label") }}
+                        {{ form.date(class="form-control" + (" is-invalid" if form.date.errors else ""), type="date") }}
+                        {% for error in form.date.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.start_time.label(class="form-label") }}
+                            {{ form.start_time(class="form-select" + (" is-invalid" if form.start_time.errors else "")) }}
+                            {% for error in form.start_time.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.end_time.label(class="form-label") }}
+                            {{ form.end_time(class="form-select" + (" is-invalid" if form.end_time.errors else "")) }}
+                            {% for error in form.end_time.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Bulk Time Slots -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-plus me-2"></i>Create Bulk Time Slots</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('assistants.bulk_time_slots') }}">
+                    {{ bulk_form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ bulk_form.doctor.label(class="form-label") }}
+                        {{ bulk_form.doctor(class="form-select" + (" is-invalid" if bulk_form.doctor.errors else "")) }}
+                        {% for error in bulk_form.doctor.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ bulk_form.start_date.label(class="form-label") }}
+                            {{ bulk_form.start_date(class="form-control" + (" is-invalid" if bulk_form.start_date.errors else ""), type="date") }}
+                            {% for error in bulk_form.start_date.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ bulk_form.end_date.label(class="form-label") }}
+                            {{ bulk_form.end_date(class="form-control" + (" is-invalid" if bulk_form.end_date.errors else ""), type="date") }}
+                            {% for error in bulk_form.end_date.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ bulk_form.days_of_week.label(class="form-label") }}
+                        <div class="row">
+                            {% for value, label in bulk_form.days_of_week.choices %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="days_of_week" value="{{ value }}" id="day{{ value }}">
+                                        <label class="form-check-label" for="day{{ value }}">{{ label }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in bulk_form.days_of_week.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ bulk_form.start_time.label(class="form-label") }}
+                            {{ bulk_form.start_time(class="form-select" + (" is-invalid" if bulk_form.start_time.errors else "")) }}
+                            {% for error in bulk_form.start_time.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ bulk_form.end_time.label(class="form-label") }}
+                            {{ bulk_form.end_time(class="form-select" + (" is-invalid" if bulk_form.end_time.errors else "")) }}
+                            {% for error in bulk_form.end_time.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        {{ bulk_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Doctor Availability -->
+<div class="row">
+    {% for doctor_id, info in availability.items() %}
+        <div class="col-md-12 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-md me-2"></i>Dr. {{ info.name }}
+                        <span class="badge bg-light text-dark ms-2">{{ info.total_slots }} available slots</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if info.grouped_slots %}
+                        <div class="accordion" id="doctorAccordion{{ doctor_id }}">
+                            {% for date_str, slots in info.grouped_slots.items() %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading{{ doctor_id }}_{{ date_str }}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ doctor_id }}_{{ date_str }}">
+                                            <strong>{{ date_str }}</strong> - {{ slots|length }} slots
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ doctor_id }}_{{ date_str }}" class="accordion-collapse collapse" data-bs-parent="#doctorAccordion{{ doctor_id }}">
+                                        <div class="accordion-body">
+                                            <div class="mb-3">
+                                                <form method="POST" action="{{ url_for('assistants.delete_day_slots', doctor_id=doctor_id, date_str=date_str) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete all unbooked time slots for this day?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> Delete All Slots for {{ date_str }}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Time</th>
+                                                            <th>Status</th>
+                                                            <th>Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for slot in slots %}
+                                                            <tr>
+                                                                <td>{{ format_time_slot(slot) }}</td>
+                                                                <td>
+                                                                    {% if slot.is_booked %}
+                                                                        <span class="badge bg-danger">Booked</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-success">Available</span>
+                                                                    {% endif %}
+                                                                </td>
+                                                                <td>
+                                                                    {% if not slot.is_booked %}
+                                                                        <form method="POST" action="{{ url_for('assistants.delete_time_slot', slot_id=slot.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this time slot?');">
+                                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                                                <i class="fas fa-trash"></i>
+                                                                            </button>
+                                                                        </form>
+                                                                    {% endif %}
+                                                                </td>
+                                                            </tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>No available time slots for this doctor. Create some using the form above.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Set default dates
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Format date as YYYY-MM-DD
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // Set default values for date fields
+        if (!$('#date').val()) {
+            $('#date').val(formatDate(tomorrow));
+        }
+
+        if (!$('#start_date').val()) {
+            $('#start_date').val(formatDate(tomorrow));
+        }
+
+        if (!$('#end_date').val()) {
+            const nextWeek = new Date(today);
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            $('#end_date').val(formatDate(nextWeek));
+        }
+
+        // Check weekdays by default (Monday to Friday)
+        for (let i = 0; i <= 4; i++) {
+            $(`#day${i}`).prop('checked', true);
+        }
+    });
+</script>
+{% endblock %}

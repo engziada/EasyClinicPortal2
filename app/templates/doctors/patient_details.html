@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ patient.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-user me-2"></i>Patient Information</h2>
+        <p class="text-muted">Detailed information for {{ patient.name }}</p>
+    </div>
+    <div class="col-auto">
+        <a href="{{ url_for('doctors.appointments') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Appointments
+        </a>
+    </div>
+</div>
+
+<!-- Patient Profile -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>Personal Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Name:</div>
+                            <div class="col-md-8">{{ patient.name }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Email:</div>
+                            <div class="col-md-8">{{ patient.email }}</div>
+                        </div>
+                        {% if patient_profile %}
+                            <div class="row mb-3">
+                                <div class="col-md-4 fw-bold">Date of Birth:</div>
+                                <div class="col-md-8">{{ patient_profile.date_of_birth.strftime('%Y-%m-%d') if patient_profile.date_of_birth else 'Not specified' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 fw-bold">Gender:</div>
+                                <div class="col-md-8">{{ patient_profile.gender or 'Not specified' }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if patient_profile %}
+                            <div class="row mb-3">
+                                <div class="col-md-4 fw-bold">Phone:</div>
+                                <div class="col-md-8">{{ patient_profile.phone or 'Not specified' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 fw-bold">Address:</div>
+                                <div class="col-md-8">{{ patient_profile.address or 'Not specified' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 fw-bold">Medical History:</div>
+                                <div class="col-md-8">{{ patient_profile.medical_history or 'None provided' }}</div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4 fw-bold">Allergies:</div>
+                                <div class="col-md-8">{{ patient_profile.allergies or 'None provided' }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Appointments -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Upcoming Appointments</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_appointments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Status</th>
+                                    <th>Reason</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in upcoming_appointments %}
+                                    <tr>
+                                        <td>{{ appointment.time_slot.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if appointment.status.value == 'scheduled' %}
+                                                <span class="badge bg-primary">{{ appointment.status.value }}</span>
+                                            {% elif appointment.status.value == 'rescheduled' %}
+                                                <span class="badge bg-warning text-dark">{{ appointment.status.value }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ appointment.reason or 'No reason provided' }}</td>
+                                        <td>
+                                            {% set time_diff = (appointment.time_slot.start_time - now).total_seconds() / 3600 if now is defined else 0 %}
+                                            {% if now is defined and (appointment.time_slot.start_time <= now or time_diff <= 1) %}
+                                                <a href="{{ url_for('doctors.live_inspection', appointment_id=appointment.id) }}" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-stethoscope me-1"></i>Start Examination
+                                                </a>
+                                                {% if time_diff <= 1 and appointment.time_slot.start_time > now %}
+                                                    <small class="d-block text-muted mt-1">Early access (appointment in {{ (time_diff * 60)|int }} min)</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">Examination not available yet</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No upcoming appointments with this patient.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Past Appointments -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Past Appointments</h5>
+            </div>
+            <div class="card-body">
+                {% if past_appointments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Status</th>
+                                    <th>Reason</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for appointment in past_appointments %}
+                                    <tr>
+                                        <td>{{ appointment.time_slot.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if appointment.status.value == 'completed' %}
+                                                <span class="badge bg-success">{{ appointment.status.value }}</span>
+                                            {% elif appointment.status.value == 'cancelled' %}
+                                                <span class="badge bg-danger">{{ appointment.status.value }}</span>
+                                            {% elif appointment.status.value == 'no_show' %}
+                                                <span class="badge bg-secondary">{{ appointment.status.value }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ appointment.reason or 'No reason provided' }}</td>
+                                        <td>{{ appointment.notes or 'No notes' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No past appointments with this patient.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Diagnostic Records -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-stethoscope me-2"></i>Diagnostic Records</h5>
+            </div>
+            <div class="card-body">
+                {% if diagnostic_records %}
+                    <div class="accordion" id="diagnosticAccordion">
+                        {% for record in diagnostic_records %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ record.id }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ record.id }}" aria-expanded="false" aria-controls="collapse{{ record.id }}">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <span>
+                                                {% if record.appointment_id %}
+                                                    <i class="fas fa-calendar-check me-2"></i>Appointment Diagnosis
+                                                {% elif record.image_id %}
+                                                    <i class="fas fa-image me-2"></i>Image Diagnosis
+                                                {% endif %}
+                                            </span>
+                                            <small class="text-muted ms-3">{{ record.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ record.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ record.id }}" data-bs-parent="#diagnosticAccordion">
+                                    <div class="accordion-body">
+                                        {% if record.red_flag %}
+                                            <div class="alert alert-danger mb-3">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>Red Flag: This diagnosis contains important health concerns.
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold">Notes:</div>
+                                            <div class="col-md-9">{{ record.notes or 'No notes provided' }}</div>
+                                        </div>
+
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold">Prescriptions:</div>
+                                            <div class="col-md-9">{{ record.prescriptions or 'No prescriptions provided' }}</div>
+                                        </div>
+
+                                        <div class="row mb-3">
+                                            <div class="col-md-3 fw-bold">Recommendations:</div>
+                                            <div class="col-md-9">{{ record.recommendations or 'No recommendations provided' }}</div>
+                                        </div>
+
+                                        {% if record.image_id and record.image_upload %}
+                                            <div class="row mb-3">
+                                                <div class="col-md-3 fw-bold">Related Image:</div>
+                                                <div class="col-md-9">
+                                                    <img src="{{ url_for('static', filename=record.image_upload.image_path) }}" class="img-fluid img-thumbnail" style="max-height: 200px;">
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No diagnostic records for this patient.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Uploads -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Uploaded Images</h5>
+            </div>
+            <div class="card-body">
+                {% if image_uploads %}
+                    <div class="row">
+                        {% for upload in image_uploads %}
+                            <div class="col-md-3 mb-4">
+                                <div class="card">
+                                    <img src="{{ url_for('static', filename=upload.image_path) }}" class="card-img-top" alt="Patient upload">
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <small class="text-muted">{{ upload.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </p>
+                                        {% if upload.message %}
+                                            <p class="card-text">{{ upload.message }}</p>
+                                        {% endif %}
+                                        {% if not upload.is_reviewed %}
+                                            <a href="{{ url_for('doctors.review_upload', upload_id=upload.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye me-1"></i>Review
+                                            </a>
+                                        {% else %}
+                                            <span class="badge bg-success">Reviewed</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>No images uploaded by this patient.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}Reschedule Appointment - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-calendar-alt me-2"></i>Reschedule Appointment</h2>
+        <p class="text-muted">Change the time of your scheduled appointment</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Appointment Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Current Appointment</h6>
+                    <p><strong>Doctor:</strong> Dr. {{ appointment.doctor.name }}</p>
+                    <p><strong>Date/Time:</strong> {{ appointment.time_slot.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                    {% if appointment.reason %}
+                        <p><strong>Reason for Visit:</strong> {{ appointment.reason }}</p>
+                    {% endif %}
+                </div>
+
+                {% if has_available_slots %}
+                    <form method="POST" action="{{ url_for('patients.reschedule_appointment', appointment_id=appointment.id) }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.time_slot.label(class="form-label") }}
+                            {{ form.time_slot(class="form-select" + (" is-invalid" if form.time_slot.errors else ""), id="time-slot-select") }}
+                            {% for error in form.time_slot.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Available time slots with Dr. {{ appointment.doctor.name }}</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.reason.label(class="form-label") }}
+                            {{ form.reason(class="form-control" + (" is-invalid" if form.reason.errors else ""), rows=3) }}
+                            {% for error in form.reason.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Please provide a reason for rescheduling (optional)</div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('patients.appointments') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Appointments
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>There are no available time slots with Dr. {{ appointment.doctor.name }} at this time.
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('patients.appointments') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Appointments
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- No need for AJAX loading since we're populating the choices server-side -->
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Dashboard - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-tachometer-alt me-2"></i>Patient Dashboard</h2>
+        <p class="text-muted">Welcome back, {{ current_user.name }}!</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('patients.reserve_appointment') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-calendar-plus me-2"></i>Reserve Appointment
+                    </a>
+                    <a href="{{ url_for('patients.upload_image') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Upload Symptom Image
+                    </a>
+                    <a href="{{ url_for('patients.profile') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-user-edit me-2"></i>Update Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Appointments -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Upcoming Appointments</h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_appointments %}
+                    <div class="list-group">
+                        {% for appointment in upcoming_appointments[:3] %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Dr. {{ appointment.doctor.name }}</h6>
+                                    <small>{{ appointment.time_slot.start_time.strftime('%Y-%m-%d') }}</small>
+                                </div>
+                                <p class="mb-1">{{ appointment.time_slot.start_time.strftime('%H:%M') }} - {{ appointment.time_slot.end_time.strftime('%H:%M') }}</p>
+                                {% if appointment.reason %}
+                                    <small class="text-muted">Reason: {{ appointment.reason }}</small>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        {% if upcoming_appointments|length > 3 %}
+                            <div class="alert alert-info py-2 mb-2">
+                                <small><i class="fas fa-info-circle me-1"></i>Showing 3 of {{ upcoming_appointments|length }} upcoming appointments</small>
+                            </div>
+                        {% endif %}
+                        <a href="{{ url_for('patients.appointments') }}" class="btn btn-sm btn-outline-primary">View All Appointments</a>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No upcoming appointments</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('patients.reserve_appointment') }}" class="btn btn-sm btn-primary">Schedule Now</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Uploads -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-images me-2"></i>Recent Uploads</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_uploads %}
+                    <div class="list-group">
+                        {% for upload in recent_uploads %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">To: Dr. {{ upload.doctor.name }}</h6>
+                                    <small>{{ upload.created_at.strftime('%Y-%m-%d') }}</small>
+                                </div>
+                                <p class="mb-1">
+                                    <img src="{{ url_for('static', filename=upload.image_path) }}" class="img-thumbnail" style="max-height: 50px;">
+                                    {% if upload.is_reviewed %}
+                                        <span class="badge bg-success">Reviewed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ url_for('patients.uploads') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No recent uploads</p>
+                    <div class="text-center">
+                        <a href="{{ url_for('patients.upload_image') }}" class="btn btn-sm btn-primary">Upload Now</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notifications -->
+{% if notifications %}
+    <div class="row">
+        <div class="col">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Recent Notifications</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for notification in notifications %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ notification.message }}</h6>
+                                    <small>{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a href="{{ url_for('patients.notifications') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

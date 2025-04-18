@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Inspection - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="fas fa-stethoscope me-2"></i>Live Inspection</h2>
+        <p class="text-muted">Appointment with {{ patient.name }} at {{ appointment.time_slot.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Patient Information -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Patient Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Name:</strong> {{ patient.name }}</p>
+                <p><strong>Email:</strong> {{ patient.email }}</p>
+                
+                {% if patient.patient_profile %}
+                    {% if patient.patient_profile.date_of_birth %}
+                        <p><strong>Date of Birth:</strong> {{ patient.patient_profile.date_of_birth.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
+                    
+                    {% if patient.patient_profile.gender %}
+                        <p><strong>Gender:</strong> {{ patient.patient_profile.gender }}</p>
+                    {% endif %}
+                    
+                    {% if patient.patient_profile.phone %}
+                        <p><strong>Phone:</strong> {{ patient.patient_profile.phone }}</p>
+                    {% endif %}
+                    
+                    {% if patient.patient_profile.medical_history %}
+                        <div class="mt-3">
+                            <h6>Medical History</h6>
+                            <p class="text-muted">{{ patient.patient_profile.medical_history }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if patient.patient_profile.allergies %}
+                        <div class="mt-3">
+                            <h6>Allergies</h6>
+                            <p class="text-muted">{{ patient.patient_profile.allergies }}</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No additional profile information available</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Previous Diagnostics -->
+        {% set previous_diagnostics = patient.patient_diagnostic_records %}
+        {% if previous_diagnostics %}
+            <div class="card shadow mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Previous Diagnostics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="previousDiagnostics">
+                        {% for diagnostic in previous_diagnostics %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading{{ diagnostic.id }}">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ diagnostic.id }}">
+                                        {{ diagnostic.created_at.strftime('%Y-%m-%d') }}
+                                        {% if diagnostic.red_flag %}
+                                            <span class="badge bg-danger ms-2">Red Flag</span>
+                                        {% endif %}
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ diagnostic.id }}" class="accordion-collapse collapse" data-bs-parent="#previousDiagnostics">
+                                    <div class="accordion-body">
+                                        <p><strong>Notes:</strong> {{ diagnostic.notes }}</p>
+                                        {% if diagnostic.prescriptions %}
+                                            <p><strong>Prescriptions:</strong> {{ diagnostic.prescriptions }}</p>
+                                        {% endif %}
+                                        {% if diagnostic.recommendations %}
+                                            <p><strong>Recommendations:</strong> {{ diagnostic.recommendations }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Inspection Form -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Inspection Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('doctors.live_inspection', appointment_id=appointment.id) }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.notes.label(class="form-label") }}
+                        {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=4) }}
+                        {% for error in form.notes.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.prescriptions.label(class="form-label") }}
+                        {{ form.prescriptions(class="form-control" + (" is-invalid" if form.prescriptions.errors else ""), rows=3) }}
+                        {% for error in form.prescriptions.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.recommendations.label(class="form-label") }}
+                        {{ form.recommendations(class="form-control" + (" is-invalid" if form.recommendations.errors else ""), rows=3) }}
+                        {% for error in form.recommendations.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        {{ form.red_flag(class="form-check-input" + (" is-invalid" if form.red_flag.errors else "")) }}
+                        {{ form.red_flag.label(class="form-check-label") }}
+                        {% for error in form.red_flag.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text text-danger">Check this if urgent follow-up is required</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.images.label(class="form-label") }}
+                        {{ form.images(class="form-control" + (" is-invalid" if form.images.errors else ""), id="image-upload") }}
+                        {% for error in form.images.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Upload images taken during the inspection (optional)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div id="image-preview" class="row g-2 d-none"></div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Multiple image preview functionality
+        $('#image-upload').change(function() {
+            const files = this.files;
+            const previewContainer = $('#image-preview');
+            
+            if (files.length > 0) {
+                previewContainer.empty().removeClass('d-none');
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const col = $('<div class="col-4"></div>');
+                        const img = $('<img class="img-fluid img-thumbnail" style="height: 150px; object-fit: cover;">');
+                        img.attr('src', e.target.result);
+                        col.append(img);
+                        previewContainer.append(col);
+                    }
+                    
+                    reader.readAsDataURL(file);
+                }
+            } else {
+                previewContainer.addClass('d-none').empty();
+            }
+        });
+    });
+</script>
+{% endblock %}
